@@ -413,6 +413,7 @@
       }
 
       function resetGame() {
+        playSound('restart');
         snake = [{x: 10, y: 10}];
         prevSnake = [{x: 10, y: 10}];
         direction = {x: 0, y: 0};
@@ -575,6 +576,7 @@
         for (let msg of SCORE_MESSAGES) {
           if (score >= msg.score && !shownMessages.includes(msg.score)) {
             shownMessages.push(msg.score);
+            playSound('achievement');
             waitingForContinue = true;
             if (gameLoopInterval) {
               clearInterval(gameLoopInterval);
@@ -635,6 +637,7 @@
         } else {
           score++;
           scoreSpan.textContent = score;
+          playSound('eat');
           if (score > highScore) {
             highScore = score;
             localStorage.setItem('snakeHighScore', highScore);
@@ -667,6 +670,7 @@
         }
 
       function showGameOver() {
+        playSound('crash');
         waitingForContinue = false;
         if (gameLoopInterval) {
           clearInterval(gameLoopInterval);
@@ -694,12 +698,14 @@
         if (gameOver || waitingForContinue) return;
         paused = !paused;
         if (paused) {
+          playSound('pause');
           pauseIndicator.classList.add('show');
           if (gameLoopInterval) {
             clearInterval(gameLoopInterval);
             gameLoopInterval = null;
           }
         } else {
+          playSound('resume');
           pauseIndicator.classList.remove('show');
           if (gameRunning) {
             startGame(); // restart interval
@@ -792,6 +798,7 @@
         currentMapIndex = (currentMapIndex + 1) % maps.length;
         walls = maps[currentMapIndex];
         mapBtn.textContent = `🗺️ MAP ${currentMapIndex + 1}`;
+        playSound('mapswitch');
         resetGame();
       }
 
