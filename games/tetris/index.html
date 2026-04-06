@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Play Tetris - the classic block-stacking game in your browser. Free, open source.">
   <title>Tetris · Retro Games</title>
-  <!-- Global retro styles -->
   <link rel="stylesheet" href="../../styles.css">
-  <!-- PWA manifest -->
   <link rel="manifest" href="../../manifest.json">
-  <!-- Google Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     body {
@@ -145,7 +142,6 @@
       text-decoration: underline;
     }
 
-    /* Touch controls grid */
     .touch-controls {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -282,7 +278,6 @@
       </div>
     </div>
 
-    <!-- Overlay for speed up / reward / countdown -->
     <div class="game-overlay" id="gameOverlay">
       <div class="overlay-content">
         <h2 id="overlayTitle">⚡ SPEED UP! ⚡</h2>
@@ -305,7 +300,7 @@
       ← → move | ↑ rotate | ↓ soft drop | Space hard drop | P pause
     </p>
 
-    <!-- Touch controls -->
+    <!--Touch controls -->
     <div class="touch-controls">
       <div class="touch-btn" data-action="left">←</div>
       <div class="touch-btn" data-action="right">→</div>
@@ -322,8 +317,6 @@
 
   <script>
     (function() {
-      // ==================== TETRIS ====================
-      // PIECES - each with shape and color. Shape: matrix of 1s. Color: hex.
       const PIECES = [
         { shape: [[1,1,1,1]], color: '#4ecdc4' }, // I piece (cyan)
         { shape: [[1,1],[1,1]], color: '#ffe66d' }, // O piece (yellow)
@@ -334,7 +327,7 @@
         { shape: [[0,0,1],[1,1,1]], color: '#3366cc' }  // J piece (blue)
       ];
 
-      // DOM elements
+
       const canvas = document.getElementById('board');
       const ctx = canvas.getContext('2d');
       const nextCanvas = document.getElementById('nextCanvas');
@@ -353,7 +346,6 @@
       const overlayNo = document.getElementById('overlayNo');
       const overlayRestart = document.getElementById('overlayRestart');
 
-      // Constants
       const COLS = 10;
       const ROWS = 20;
       const CELL_SIZE = canvas.width / COLS;
@@ -361,7 +353,7 @@
       const BASE_SPEED = 500; // ms
       const MIN_SPEED = 80; // ms
 
-      // Score thresholds for speed increase and messages
+      //Score thresholds for speed increase and messages
       const SPEED_THRESHOLDS = [
         { score: 500, message: "Nice! Speed increasing...", interval: 400 },
         { score: 1500, message: "You're on fire!", interval: 300 },
@@ -370,7 +362,7 @@
         { score: 8000, message: "Legendary!", interval: 80 }
       ];
 
-      // Game state
+      //Game state
       let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
       let currentPiece = null;
       let nextPiece = null;
@@ -385,7 +377,7 @@
       let countdownActive = false;
       let countdownValue = 3;
       let countdownTimer = null;
-      let savedIntervalBeforeCountdown = BASE_SPEED; // to restore after countdown
+      let savedIntervalBeforeCountdown = BASE_SPEED;
       let paused = false;
       let gameLoopInterval = null;
       let gameRunning = false;
@@ -501,25 +493,20 @@
       }
 
       function checkSpeedUpOrReward() {
-        // Special reward at 3000 (only once)
         if (score >= 3000 && !rewardOffered3000) {
           rewardOffered3000 = true;
-          speedUpActive = true; // prevent game step
           if (gameLoopInterval) {
             clearInterval(gameLoopInterval);
             gameLoopInterval = null;
           }
           gameRunning = false;
-          // Save current interval to restore later
           savedIntervalBeforeCountdown = fallInterval;
-          // Start countdown
           startRewardCountdown();
           return;
         }
 
-        // Otherwise handle speed thresholds
         for (let i = SPEED_THRESHOLDS.length - 1; i >= 0; i--) {
-          if (score >= SPEED_THRESHOLDS[i].score && i > currentSpeedIndex && i !== 2) { // skip index 2 (3000) for normal speed up
+          if (score >= SPEED_THRESHOLDS[i].score && i > currentSpeedIndex && i !== 2) { //skip index 2 (3000) for normal speed up
             currentSpeedIndex = i;
             fallInterval = SPEED_THRESHOLDS[i].interval;
             if (!gameOver && !speedUpActive) {
@@ -560,7 +547,6 @@
         // During countdown, the game runs at slower speed (800ms)
         fallInterval = 800;
         // Restart game loop with slower speed while overlay is visible (but non-interactive)
-        // We need to set pointer-events: none on overlay during countdown so clicks pass through
         gameOverlay.style.pointerEvents = 'none'; // allow interaction with canvas
         // Restart game loop
         gameRunning = true;
@@ -589,9 +575,9 @@
           gameLoopInterval = null;
         }
         gameRunning = false;
-        // Restore normal speed (the speed before countdown)
+        //Restore normal speed (the speed before countdown)
         fallInterval = savedIntervalBeforeCountdown;
-        // Now show the choice overlay with interactive buttons
+        //Show the choice overlay with interactive buttons
         gameOverlay.style.pointerEvents = 'auto';
         overlayTitle.textContent = '🎁 REWARD TIME! 🎁';
         overlayMessage.textContent = "Do you want a reward? (If this is hard for you)";
@@ -603,7 +589,7 @@
       }
 
       function handleRewardYes() {
-        // Speed up drastically and show "sikeee"
+        //Speed up drastically and show "sikeee"
         fallInterval = 100; // very fast
         overlayTitle.textContent = 'SIKEEE!';
         overlayMessage.textContent = 'Faster now! 😈';
@@ -677,7 +663,7 @@
       }
 
       function rotate() {
-        if (!currentPiece || gameOver || paused || speedUpActive) return;
+        if (!currentPiece || gameOver || paused || speedUpActive || rewardCountdownActive) return;
         const rotated = currentPiece.shape[0].map((_, index) => currentPiece.shape.map(row => row[index]).reverse());
         if (!collision(rotated, currentX, currentY)) {
           currentPiece.shape = rotated;
@@ -686,7 +672,7 @@
       }
 
       function hardDrop() {
-        if (!currentPiece || gameOver || paused || speedUpActive) return;
+        if (!currentPiece || gameOver || paused || speedUpActive || rewardCountdownActive) return;
         while (!collision(currentPiece.shape, currentX, currentY + 1)) {
           currentY++;
         }
@@ -834,7 +820,7 @@
       }
 
       function handleTouchAction(action) {
-        if (gameOver || speedUpActive) {
+        if (gameOver || speedUpActive || rewardCountdownActive) {
           if (action === 'restart') initGame();
           return;
         }
