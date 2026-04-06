@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Play Tetris - the classic block-stacking game in your browser. Free, open source.">
+  <title>Tetris · Retro Games</title>
+  <!-- Global retro styles -->
+  <link rel="stylesheet" href="../../styles.css">
+  <!-- PWA manifest -->
+  <link rel="manifest" href="../../manifest.json">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg-dark);
+    }
+
+    .game-container {
+      text-align: center;
+      background: var(--bg-card);
+      border: 4px solid var(--accent-cyan);
+      padding: 20px;
+      box-shadow: var(--border-glow);
+      max-width: 700px;
+      width: 100%;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: var(--accent-yellow);
+      text-shadow: 3px 3px 0 var(--accent-pink);
+    }
+
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      font-family: var(--font-main);
+      font-size: 0.7rem;
+      margin-bottom: 10px;
+      color: var(--text-light);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .game-area {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .board-container {
+      position: relative;
+    }
+
+    canvas#board {
+      display: block;
+      border: 3px solid var(--accent-pink);
+      background: #000;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      width: 100%;
+      max-width: 300px;
+      height: auto;
+      aspect-ratio: 1 / 2;
+      touch-action: none;
+    }
+
+    .info-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      align-items: center;
+    }
+
+    .next-piece {
+      background: var(--bg-dark);
+      border: 2px solid var(--accent-cyan);
+      padding: 10px;
+    }
+
+    .next-piece h3 {
+      font-size: 0.6rem;
+      margin-bottom: 5px;
+      color: var(--accent-yellow);
+    }
+
+    canvas#nextCanvas {
+      display: block;
+      border: 1px solid var(--accent-pink);
+      background: #000;
+      image-rendering: pixelated;
+      width: 100px;
+      height: 100px;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: var(--accent-cyan);
+      border: 2px solid var(--accent-yellow);
+      color: var(--bg-dark);
+      font-family: var(--font-main);
+      font-size: 0.6rem;
+      padding: 10px 15px;
+      cursor: pointer;
+      transition: 0.2s;
+      min-width: 80px;
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      background: var(--accent-pink);
+      border-color: var(--accent-cyan);
+    }
+
+    .back-link {
+      margin-top: 20px;
+      font-size: 0.6rem;
+    }
+
+    .back-link a {
+      color: var(--accent-yellow);
+      text-decoration: none;
+    }
+
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* Touch controls grid */
+    .touch-controls {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-width: 300px;
+      margin: 15px auto 0;
+    }
+
+    .touch-btn {
+      background: var(--bg-card);
+      border: 2px solid var(--accent-cyan);
+      color: var(--text-light);
+      font-size: 1.2rem;
+      padding: 10px;
+      cursor: pointer;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      user-select: none;
+      transition: background 0.1s;
+    }
+
+    .touch-btn:active {
+      background: var(--accent-pink);
+    }
+
+    @media (min-width: 768px) {
+      .touch-controls {
+        display: none;
+      }
+    }
+
+    .pause-indicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--accent-yellow);
+      color: var(--bg-dark);
+      font-size: 0.5rem;
+      padding: 4px 8px;
+      border: 1px solid var(--accent-pink);
+      display: none;
+      z-index: 5;
+    }
+
+    .pause-indicator.show {
+      display: block;
+    }
+
+    .game-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .game-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .overlay-content {
+      background: var(--bg-card);
+      border: 3px solid var(--accent-pink);
+      padding: 20px;
+      text-align: center;
+      max-width: 80%;
+    }
+
+    .overlay-content h2 {
+      color: var(--accent-yellow);
+      font-size: 1rem;
+      margin-bottom: 15px;
+    }
+
+    .overlay-content p {
+      font-size: 0.7rem;
+      margin-bottom: 20px;
+      color: var(--text-light);
+    }
+
+    .overlay-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .countdown-number {
+      font-size: 3rem;
+      color: var(--accent-pink);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>🧩 TETRIS</h1>
+    <div class="score-board">
+      <span>Score: <span id="score">0</span></span>
+      <span>Lines: <span id="lines">0</span></span>
+      <span>High Score: <span id="highScore">0</span></span>
+    </div>
+
+    <div class="game-area">
+      <div class="board-container">
+        <canvas id="board" width="300" height="600"></canvas>
+        <!-- Pause indicator -->
+        <div class="pause-indicator" id="pauseIndicator">PAUSED</div>
+      </div>
+
+      <div class="info-panel">
+        <div class="next-piece">
+          <h3>NEXT</h3>
+          <canvas id="nextCanvas" width="100" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Overlay for speed up / reward / countdown -->
+    <div class="game-overlay" id="gameOverlay">
+      <div class="overlay-content">
+        <h2 id="overlayTitle">⚡ SPEED UP! ⚡</h2>
+        <p id="overlayMessage">Message here</p>
+        <div id="countdownDisplay" class="countdown-number" style="display: none;">3</div>
+        <div class="overlay-buttons" id="overlayButtons">
+          <button id="overlayContinue" style="display: none;">➡️ CONTINUE</button>
+          <button id="overlayYes" style="display: none;">✅ Yes</button>
+          <button id="overlayNo" style="display: none;">❌ No</button>
+          <button id="overlayRestart">↻ PLAY AGAIN</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="restartBtn">↻ RESTART</button>
+      <button id="pauseBtn">⏸️ PAUSE</button>
+    </div>
+    <p style="font-size: 0.5rem; color: var(--text-dim); margin-top: 10px;">
+      ← → move | ↑ rotate | ↓ soft drop | Space hard drop | P pause
+    </p>
+
+    <!-- Touch controls -->
+    <div class="touch-controls">
+      <div class="touch-btn" data-action="left">←</div>
+      <div class="touch-btn" data-action="right">→</div>
+      <div class="touch-btn" data-action="rotate">↻</div>
+      <div class="touch-btn" data-action="drop">⬇️⬇️</div>
+      <div class="touch-btn" data-action="pause">⏸️</div>
+      <div class="touch-btn" data-action="restart">↻</div>
+    </div>
+
+    <div class="back-link">
+      <a href="../../index.html">← BACK TO LOBBY</a>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // ==================== TETRIS ====================
+      // PIECES - each with shape and color. Shape: matrix of 1s. Color: hex.
+      const PIECES = [
+        { shape: [[1,1,1,1]], color: '#4ecdc4' }, // I piece (cyan)
+        { shape: [[1,1],[1,1]], color: '#ffe66d' }, // O piece (yellow)
+        { shape: [[0,1,0],[1,1,1]], color: '#a56eff' }, // T piece (purple)
+        { shape: [[0,1,1],[1,1,0]], color: '#ff6b9d' }, // S piece (pink)
+        { shape: [[1,1,0],[0,1,1]], color: '#ffa500' }, // Z piece (orange)
+        { shape: [[1,0,0],[1,1,1]], color: '#4ecdc4' }, // L piece (cyan)
+        { shape: [[0,0,1],[1,1,1]], color: '#3366cc' }  // J piece (blue)
+      ];
+
+      // DOM elements
+      const canvas = document.getElementById('board');
+      const ctx = canvas.getContext('2d');
+      const nextCanvas = document.getElementById('nextCanvas');
+      const nextCtx = nextCanvas.getContext('2d');
+      const scoreSpan = document.getElementById('score');
+      const linesSpan = document.getElementById('lines');
+      const highScoreSpan = document.getElementById('highScore');
+      const pauseIndicator = document.getElementById('pauseIndicator');
+      const gameOverlay = document.getElementById('gameOverlay');
+      const overlayTitle = document.getElementById('overlayTitle');
+      const overlayMessage = document.getElementById('overlayMessage');
+      const countdownDisplay = document.getElementById('countdownDisplay');
+      const overlayButtons = document.getElementById('overlayButtons');
+      const overlayContinue = document.getElementById('overlayContinue');
+      const overlayYes = document.getElementById('overlayYes');
+      const overlayNo = document.getElementById('overlayNo');
+      const overlayRestart = document.getElementById('overlayRestart');
+
+      // Constants
+      const COLS = 10;
+      const ROWS = 20;
+      const CELL_SIZE = canvas.width / COLS;
+      const NEXT_SIZE = 20;
+      const BASE_SPEED = 500; // ms
+      const MIN_SPEED = 80; // ms
+
+      // Score thresholds for speed increase and messages
+      const SPEED_THRESHOLDS = [
+        { score: 500, message: "Nice! Speed increasing...", interval: 400 },
+        { score: 1500, message: "You're on fire!", interval: 300 },
+        { score: 3000, message: "Damn you're crazy! Special reward unlocked!", interval: 200 }, // special
+        { score: 5000, message: "Unstoppable!", interval: 120 },
+        { score: 8000, message: "Legendary!", interval: 80 }
+      ];
+
+      // Game state
+      let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+      let currentPiece = null;
+      let nextPiece = null;
+      let currentX = 0, currentY = 0;
+      let score = 0;
+      let lines = 0;
+      let highScore = localStorage.getItem('tetrisHighScore') || 0;
+      let gameOver = false;
+      let speedUpActive = false; // overlay active (speed up or reward)
+      let rewardOffered3000 = false;
+      let rewardCountdownActive = false;
+      let countdownActive = false;
+      let countdownValue = 3;
+      let countdownTimer = null;
+      let savedIntervalBeforeCountdown = BASE_SPEED; // to restore after countdown
+      let paused = false;
+      let gameLoopInterval = null;
+      let gameRunning = false;
+      let fallInterval = BASE_SPEED;
+      let currentSpeedIndex = -1;
+
+      highScoreSpan.textContent = highScore;
+
+      function randomPiece() {
+        return JSON.parse(JSON.stringify(PIECES[Math.floor(Math.random() * PIECES.length)]));
+      }
+
+      function initGame() {
+        board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        nextPiece = randomPiece();
+        spawnNewPiece();
+        score = 0;
+        lines = 0;
+        fallInterval = BASE_SPEED;
+        currentSpeedIndex = -1;
+        rewardOffered3000 = false;
+        gameOver = false;
+        speedUpActive = false;
+        countdownActive = false;
+        if (countdownTimer) clearInterval(countdownTimer);
+        paused = false;
+        pauseIndicator.classList.remove('show');
+        gameOverlay.classList.remove('show');
+        overlayContinue.style.display = 'none';
+        overlayYes.style.display = 'none';
+        overlayNo.style.display = 'none';
+        overlayRestart.style.display = 'inline-block';
+        countdownDisplay.style.display = 'none';
+        updateScore();
+        draw();
+        drawNext();
+        if (gameLoopInterval) {
+          clearInterval(gameLoopInterval);
+          gameLoopInterval = null;
+        }
+        gameRunning = false;
+      }
+
+      function spawnNewPiece() {
+        currentPiece = nextPiece ? nextPiece : randomPiece();
+        nextPiece = randomPiece();
+        currentX = Math.floor((COLS - currentPiece.shape[0].length) / 2);
+        currentY = 0;
+
+        if (collision(currentPiece.shape, currentX, currentY)) {
+          gameOver = true;
+          showGameOver();
+        }
+      }
+
+      function collision(shape, offsetX, offsetY) {
+        for (let y = 0; y < shape.length; y++) {
+          for (let x = 0; x < shape[y].length; x++) {
+            if (shape[y][x] !== 0) {
+              const boardX = offsetX + x;
+              const boardY = offsetY + y;
+              if (boardX < 0 || boardX >= COLS || boardY >= ROWS || boardY < 0 || (boardY >= 0 && board[boardY][boardX] !== 0)) {
+                return true;
+              }
+            }
+          }
+        }
+        return false;
+      }
+
+      function mergePiece() {
+        for (let y = 0; y < currentPiece.shape.length; y++) {
+          for (let x = 0; x < currentPiece.shape[y].length; x++) {
+            if (currentPiece.shape[y][x] !== 0) {
+              const boardY = currentY + y;
+              const boardX = currentX + x;
+              if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+                board[boardY][boardX] = currentPiece.color;
+              }
+            }
+          }
+        }
+        clearLines();
+        spawnNewPiece();
+      }
+
+      function clearLines() {
+        let linesCleared = 0;
+        for (let y = ROWS - 1; y >= 0; y--) {
+          if (board[y].every(cell => cell !== 0)) {
+            board.splice(y, 1);
+            board.unshift(Array(COLS).fill(0));
+            linesCleared++;
+            y++;
+          }
+        }
+
+        if (linesCleared > 0) {
+          const points = [0, 100, 300, 500, 800];
+          const addScore = points[linesCleared];
+          score += addScore;
+          lines += linesCleared;
+          updateScore();
+
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('tetrisHighScore', highScore);
+            highScoreSpan.textContent = highScore;
+          }
+
+          checkSpeedUpOrReward();
+        }
+      }
+
+      function checkSpeedUpOrReward() {
+        // Special reward at 3000 (only once)
+        if (score >= 3000 && !rewardOffered3000) {
+          rewardOffered3000 = true;
+          speedUpActive = true; // prevent game step
+          if (gameLoopInterval) {
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = null;
+          }
+          gameRunning = false;
+          // Save current interval to restore later
+          savedIntervalBeforeCountdown = fallInterval;
+          // Start countdown
+          startRewardCountdown();
+          return;
+        }
+
+        // Otherwise handle speed thresholds
+        for (let i = SPEED_THRESHOLDS.length - 1; i >= 0; i--) {
+          if (score >= SPEED_THRESHOLDS[i].score && i > currentSpeedIndex && i !== 2) { // skip index 2 (3000) for normal speed up
+            currentSpeedIndex = i;
+            fallInterval = SPEED_THRESHOLDS[i].interval;
+            if (!gameOver && !speedUpActive) {
+              speedUpActive = true;
+              if (gameLoopInterval) {
+                clearInterval(gameLoopInterval);
+                gameLoopInterval = null;
+              }
+              gameRunning = false;
+              overlayTitle.textContent = '⚡ SPEED UP! ⚡';
+              overlayMessage.textContent = SPEED_THRESHOLDS[i].message;
+              overlayContinue.style.display = 'inline-block';
+              overlayYes.style.display = 'none';
+              overlayNo.style.display = 'none';
+              overlayRestart.style.display = 'inline-block';
+              countdownDisplay.style.display = 'none';
+              gameOverlay.classList.add('show');
+            }
+            break;
+          }
+        }
+      }
+
+      function startRewardCountdown() {
+        rewardCountdownActive =true;
+        countdownActive = true;
+        countdownValue = 3;
+        overlayTitle.textContent = '⏳ REWARD INCOMING...';
+        overlayMessage.textContent = 'Get ready!';
+        overlayContinue.style.display = 'none';
+        overlayYes.style.display = 'none';
+        overlayNo.style.display = 'none';
+        overlayRestart.style.display = 'inline-block';
+        countdownDisplay.style.display = 'block';
+        countdownDisplay.textContent = countdownValue;
+        gameOverlay.classList.add('show');
+
+        // During countdown, the game runs at slower speed (800ms)
+        fallInterval = 800;
+        // Restart game loop with slower speed while overlay is visible (but non-interactive)
+        // We need to set pointer-events: none on overlay during countdown so clicks pass through
+        gameOverlay.style.pointerEvents = 'none'; // allow interaction with canvas
+        // Restart game loop
+        gameRunning = true;
+        if (gameLoopInterval) clearInterval(gameLoopInterval);
+        gameLoopInterval = setInterval(step, fallInterval);
+
+        // Start countdown timer
+        if (countdownTimer) clearInterval(countdownTimer);
+        countdownTimer = setInterval(() => {
+          countdownValue--;
+          countdownDisplay.textContent = countdownValue;
+          if (countdownValue <= 0) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            endRewardCountdown();
+          }
+        }, 1000);
+      }
+
+      function endRewardCountdown() {
+        countdownActive = false;
+        rewardCountdownActive = false;
+        // Stop game loop
+        if (gameLoopInterval) {
+          clearInterval(gameLoopInterval);
+          gameLoopInterval = null;
+        }
+        gameRunning = false;
+        // Restore normal speed (the speed before countdown)
+        fallInterval = savedIntervalBeforeCountdown;
+        // Now show the choice overlay with interactive buttons
+        gameOverlay.style.pointerEvents = 'auto';
+        overlayTitle.textContent = '🎁 REWARD TIME! 🎁';
+        overlayMessage.textContent = "Do you want a reward? (If this is hard for you)";
+        overlayContinue.style.display = 'none';
+        overlayYes.style.display = 'inline-block';
+        overlayNo.style.display = 'inline-block';
+        overlayRestart.style.display = 'inline-block';
+        countdownDisplay.style.display = 'none';
+      }
+
+      function handleRewardYes() {
+        // Speed up drastically and show "sikeee"
+        fallInterval = 100; // very fast
+        overlayTitle.textContent = 'SIKEEE!';
+        overlayMessage.textContent = 'Faster now! 😈';
+        overlayYes.style.display = 'none';
+        overlayNo.style.display = 'none';
+        overlayContinue.style.display = 'inline-block'; // use continue to proceed
+        // Resume game loop with new speed
+        speedUpActive = false;
+        gameRunning = true;
+        if (gameLoopInterval) clearInterval(gameLoopInterval);
+        gameLoopInterval = setInterval(step, fallInterval);
+      }
+
+      function handleRewardNo() {
+        // Clear board, add 250 points, show gift message
+        board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        score += 250;
+        updateScore();
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('tetrisHighScore', highScore);
+          highScoreSpan.textContent = highScore;
+        }
+        spawnNewPiece(); // start fresh
+        overlayTitle.textContent = '🎁 NEVERMIND!';
+        overlayMessage.textContent = "Here's a gift for you: +250 points and a clean board!";
+        overlayYes.style.display = 'none';
+        overlayNo.style.display = 'none';
+        overlayContinue.style.display = 'inline-block';
+        // Resume game at normal speed (fallInterval unchanged from before countdown)
+        speedUpActive = false;
+        gameRunning = true;
+        if (gameLoopInterval) clearInterval(gameLoopInterval);
+        gameLoopInterval = setInterval(step, fallInterval);
+      }
+
+      function continueGame() {
+        speedUpActive = false;
+        rewardCountdownActive = false;
+        gameOverlay.classList.remove('show');
+        overlayContinue.style.display = 'none';
+        if (!gameOver && !paused) {
+          if (gameRunning) {
+            gameLoopInterval = setInterval(step, fallInterval);
+          }
+        }
+      }
+
+      function updateScore() {
+        scoreSpan.textContent = score;
+        linesSpan.textContent = lines;
+      }
+
+      function move(dx, dy) {
+        if (!currentPiece || gameOver || paused || speedUpActive) return false;
+        const newX = currentX + dx;
+        const newY = currentY + dy;
+        if (!collision(currentPiece.shape, newX, newY)) {
+          currentX = newX;
+          currentY = newY;
+          draw();
+          return true;
+        } else if (dy === 1) {
+          mergePiece();
+          if (gameover) return false;
+          draw();
+          drawNext();
+          return false;
+        }
+        return false;
+      }
+
+      function rotate() {
+        if (!currentPiece || gameOver || paused || speedUpActive) return;
+        const rotated = currentPiece.shape[0].map((_, index) => currentPiece.shape.map(row => row[index]).reverse());
+        if (!collision(rotated, currentX, currentY)) {
+          currentPiece.shape = rotated;
+          draw();
+        }
+      }
+
+      function hardDrop() {
+        if (!currentPiece || gameOver || paused || speedUpActive) return;
+        while (!collision(currentPiece.shape, currentX, currentY + 1)) {
+          currentY++;
+        }
+        mergePiece();
+        draw();
+        drawNext();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            if (board[y][x] !== 0) {
+              ctx.fillStyle = board[y][x];
+              ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1);
+            } else {
+              ctx.strokeStyle = '#333';
+              ctx.lineWidth = 0.5;
+              ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+          }
+        }
+        if (currentPiece && !gameOver) {
+          for (let y = 0; y < currentPiece.shape.length; y++) {
+            for (let x = 0; x < currentPiece.shape[y].length; x++) {
+              if (currentPiece.shape[y][x] !== 0) {
+                ctx.fillStyle = currentPiece.color;
+                ctx.fillRect((currentX + x) * CELL_SIZE, (currentY + y) * CELL_SIZE, CELL_SIZE - 1, CELL_SIZE - 1);
+              }
+            }
+          }
+        }
+      }
+
+      function drawNext() {
+        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        if (nextPiece) {
+          const shape = nextPiece.shape;
+          const color = nextPiece.color;
+          const cols = shape[0].length;
+          const rows = shape.length;
+          const offsetX = (5 - cols) * NEXT_SIZE / 2;
+          const offsetY = (5 - rows) * NEXT_SIZE / 2;
+          for (let y = 0; y < rows; y++) {
+            for (let x = 0; x < cols; x++) {
+              if (shape[y][x] !== 0) {
+                nextCtx.fillStyle = color;
+                nextCtx.fillRect(offsetX + x * NEXT_SIZE, offsetY + y * NEXT_SIZE, NEXT_SIZE - 1, NEXT_SIZE - 1);
+              }
+            }
+          }
+        }
+      }
+
+      function step() {
+        if (gameOver || paused || speedUpActive) return;
+        move(0, 1);
+      }
+
+      function startGame() {
+        if (gameRunning) return;
+        gameRunning = true;
+        gameLoopInterval = setInterval(step, fallInterval);
+      }
+
+      function togglePause() {
+        if (gameOver || speedUpActive) return;
+        paused = !paused;
+        if (paused) {
+          pauseIndicator.classList.add('show');
+          if (gameLoopInterval) {
+            clearInterval(gameLoopInterval);
+            gameLoopInterval = null;
+          }
+        } else {
+          pauseIndicator.classList.remove('show');
+          if (gameRunning) {
+            gameLoopInterval = setInterval(step, fallInterval);
+          }
+        }
+      }
+
+      function showGameOver() {
+        if (gameLoopInterval) {
+          clearInterval(gameLoopInterval);
+          gameLoopInterval = null;
+        }
+        gameRunning = false;
+        overlayTitle.textContent = 'GAME OVER';
+        overlayMessage.textContent = `Score: ${score}`;
+        overlayContinue.style.display = 'none';
+        overlayYes.style.display = 'none';
+        overlayNo.style.display = 'none';
+        overlayRestart.style.display = 'inline-block';
+        countdownDisplay.style.display = 'none';
+        gameOverlay.style.pointerEvents = 'auto';
+        gameOverlay.classList.add('show');
+        draw();
+      }
+
+      // Keyboard handler
+      function handleKey(e) {
+        const key = e.key;
+        if (gameOver || speedUpActive || rewardCountdownActive) {
+          if (key === ' ' || key === 'Space') {
+            e.preventDefault();
+          }
+          return;
+        }
+        if (key === 'p' || key === 'P') {
+          e.preventDefault();
+          togglePause();
+          return;
+        }
+        if (paused) return;
+
+        switch (key) {
+          case 'ArrowLeft':
+            e.preventDefault();
+            move(-1, 0);
+            if (!gameRunning) startGame();
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            move(1, 0);
+            if (!gameRunning) startGame();
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            move(0, 1);
+            if (!gameRunning) startGame();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            rotate();
+            if (!gameRunning) startGame();
+            break;
+          case ' ':
+          case 'Space':
+            e.preventDefault();
+            hardDrop();
+            if (!gameRunning) startGame();
+            break;
+        }
+      }
+
+      function handleTouchAction(action) {
+        if (gameOver || speedUpActive) {
+          if (action === 'restart') initGame();
+          return;
+        }
+        switch (action) {
+          case 'left': move(-1, 0); if (!gameRunning) startGame(); break;
+          case 'right': move(1, 0); if (!gameRunning) startGame(); break;
+          case 'rotate': rotate(); if (!gameRunning) startGame(); break;
+          case 'drop': hardDrop(); if (!gameRunning) startGame(); break;
+          case 'pause': togglePause(); break;
+          case 'restart': initGame(); break;
+        }
+      }
+
+      window.addEventListener('keydown', handleKey);
+
+      document.getElementById('restartBtn').addEventListener('click', initGame);
+      document.getElementById('pauseBtn').addEventListener('click', togglePause);
+      overlayRestart.addEventListener('click', initGame);
+      overlayContinue.addEventListener('click', continueGame);
+      overlayYes.addEventListener('click', handleRewardYes);
+      overlayNo.addEventListener('click', handleRewardNo);
+
+      document.querySelectorAll('.touch-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const action = btn.dataset.action;
+          if (action) handleTouchAction(action);
+        });
+        btn.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const action = btn.dataset.action;
+          if (action) handleTouchAction(action);
+        });
+      });
+
+      canvas.addEventListener('contextmenu', e => e.preventDefault());
+      nextCanvas.addEventListener('contextmenu', e => e.preventDefault());
+
+      initGame();
+    })();
+  </script>
+</body>
+</html>
